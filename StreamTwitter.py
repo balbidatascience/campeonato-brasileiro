@@ -2,6 +2,7 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 import json
+import time
 from pymongo import MongoClient
 from SentimentAnalysis import SentimentAnalysis
 
@@ -18,7 +19,7 @@ class Mongo():
 
     def saveTweet(self, tweet):
 
-        db = self.client.dbteste
+        db = self.client.dbsocialsentiment
         id = db.tweets.insert_one(tweet).inserted_id
         #print(id)
         return True
@@ -27,7 +28,7 @@ class Mongo():
 # Receive data stream
 class Listener(StreamListener):
 
-    tweets = []
+    #tweets = []
     mongo = Mongo()
     ml = SentimentAnalysis()
 
@@ -36,12 +37,16 @@ class Listener(StreamListener):
         self.ml.TrainModel()
         tweet = json.loads(data)
 
-        self.tweets.append(tweet['text'])
+        #print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        #print(tweet)
+        #print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
+        #self.tweets.append(tweet['text'])
 
         # Salva json no Mongo
-        #self.mongo.saveTweet(tweet)
+        self.mongo.saveTweet(tweet)
 
-        print(self.ml.Predict3(tweet['text']))
+        #print(self.ml.getSentimentAnalysis(tweet['text']))
         return True
 
     def on_error(self, status):
@@ -50,15 +55,18 @@ class Listener(StreamListener):
 
 if __name__ == '__main__':
 
-    try:
+    while True:
 
-        # Connect to Twitter Streaming API
-        auth = OAuthHandler(consumer_key, consumer_secret)
-        auth.set_access_token(access_token, access_token_secret)
-        stream = Stream(auth, Listener())
+        try:
+            # Connect to Twitter Streaming API
+            auth = OAuthHandler(consumer_key, consumer_secret)
+            auth.set_access_token(access_token, access_token_secret)
 
-        # Filter Twitter Streams by soccer teams
-        stream.filter(track=['greve'])
+            stream = Stream(auth, Listener())
 
-    except Exception as e:
-        print(str(e))
+            # Filter Twitter Streams by soccer teams
+            stream.filter(track=['#BRA', '#ESP', '#ARG', '#GER', '#FRA', '#POR', '#ENG', '#BEL', '#URU'])
+
+        except Exception as e:
+            print(str(e))
+            time.sleep(5)
