@@ -1,7 +1,7 @@
 # demo-analisesentimento
 
   Projeto para analisar o sentimento no Twitter de determinados tópicos.
-  A solução que pode ser utilizada para comparar o sentimento de seus clientes contra os concorrentes ou de um determinado produto. 
+  A solução pode ser utilizada para comparar o sentimento de seus clientes contra os concorrentes ou de um determinado produto. 
   Para demonstração, analisei os principais candidatos a ganhar a Copa do Mundo de Futebol do ano de 2018. 
 
 ## Tecnologias utilizadas:
