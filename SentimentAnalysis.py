@@ -9,6 +9,7 @@ from sklearn.model_selection import cross_val_predict
 #nltk.download('punkt')
 
 from textblob import TextBlob
+from DataLake import Mongo
 
 
 class SentimentAnalysis:
@@ -69,7 +70,7 @@ class SentimentAnalysis:
             return False
 
     def cleanTweet(self, tweet):
-        tweet = tweet.lower()
+        tweet = str(tweet).lower()
 
         # Remove URLS. (I stole this regex from the internet.)
         tweet = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', tweet)
@@ -109,11 +110,13 @@ class SentimentAnalysis:
         print('------------------------------------------------------------------')
         print('Antes: {0}'.format(tweet))
         print('Depoi: {0}'.format(text))
+        print('-------              -------------               -----------------')
+
         if textBlod.detect_language() != 'en':
             trad = TextBlob(str(textBlod.translate(to='en')))
-            print('Frase: {0} - Sentimento: {1}'.format(trad, trad.sentiment))
+            print('Sentimento Geral: {0}'.format(trad.sentiment))
         else:
-            print('Frase: {0} - Sentimento: {1}'.format(textBlod, textBlod.sentiment))
+            print('Sentimento Geral: {0}'.format(textBlod.sentiment))
 
         print('\n')
 
@@ -134,6 +137,17 @@ class SentimentAnalysis:
 
         return True
 
+    def test(self):
+        db = Mongo()
 
-#obj = SentimentAnalysis()
+        tweets = db.listTweets()
+
+        for tweet in tweets:
+            self.getSentimentAnalysis(tweet['text'])
+
+
+
+obj = SentimentAnalysis()
+obj.test()
+
 #print(obj.cleanTweet('😂😂😂😬👀🙄👹😍😜😎 Gabriel é lindo'))

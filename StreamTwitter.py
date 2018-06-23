@@ -5,25 +5,13 @@ import json
 import time
 from pymongo import MongoClient
 from SentimentAnalysis import SentimentAnalysis
+from DataLake import Mongo
 
 # User credentials to access Twitter API
-consumer_key = "BMLdHNoJGavqRxJUNvZ5fyjzf"
-consumer_secret = "GTw2e7eNt0Q7airO0ck4MMkv8LZ21ky4TVK2oAkAyBZBi0UHpF"
-access_token = "289365370-MJmm0ekadUH6gJfw48iarT9d9zAsUwsz1sf9m0uN"
-access_token_secret = "XnWsRuIoMF8jqhxAFovIAJMCf3sHvpB3dE1WyUzThu2di"
-
-
-class Mongo():
-
-    client = MongoClient('mongodb://localhost:27017/')
-
-    def saveTweet(self, tweet):
-
-        db = self.client.dbsocialsentiment
-        id = db.tweets.insert_one(tweet).inserted_id
-        #print(id)
-        return True
-
+consumer_key = ''
+consumer_secret = ''
+access_token = ''
+access_token_secret = ''
 
 # Receive data stream
 class Listener(StreamListener):
