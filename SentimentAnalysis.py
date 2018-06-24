@@ -1,23 +1,16 @@
-import nltk
 import re
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn import metrics
-from sklearn.model_selection import cross_val_predict
-
-#nltk.download('punkt')
-
 from textblob import TextBlob
 from DataLake import Mongo
 
 
 class SentimentAnalysis:
-    df_tweet = pd.read_csv('data/Tweets_Mg.csv')
 
+    df_tweet = pd.read_csv('data/Tweets_Mg.csv')
     tweets = df_tweet['Text'].values
     classes = df_tweet['Classificacao'].values
 
+    analysis_return = []
     emoji_pattern = re.compile("["
                                u"\U0001F600-\U0001F64F"  # emoticons
                                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -25,45 +18,8 @@ class SentimentAnalysis:
                                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                                "]+", flags=re.UNICODE)
 
-    def TrainModel(self):
-        vectorizer = CountVectorizer(analyzer="word")
-        freq_tweets = vectorizer.fit_transform(self.tweets)
-        modelo = MultinomialNB()
-        modelo.fit(freq_tweets, self.classes)
-        return vectorizer, modelo
-
-    def TrainModel2(self):
-        vectorizer2 = CountVectorizer(ngram_range=(1, 2))
-        freq_tweets = vectorizer2.fit_transform(self.tweets)
-        modelo2 = MultinomialNB()
-        modelo2.fit(freq_tweets, self.classes)
-        return vectorizer2, modelo2
-
-    def Predict(self, tweet):
-        vec, model = self.TrainModel()
-
-        freq_testes = vec.transform(tweet)
-        return {'tweet': tweet,
-                'result': model.predict(freq_testes)}
-
-    def Predict2(self, tweet):
-        vec, model = self.TrainModel2()
-
-        freq_testes = vec.transform(tweet)
-        return {'tweet': tweet,
-                'result': model.predict(freq_testes)}
-
-    def ComparePredict(self, tweet):
-        vec, model = self.TrainModel()
-        vec2, model2 = self.TrainModel2()
-
-        freq_testes = vec.transform(tweet)
-        # freq_testes2 = vec2.transform(tweet)
-        return {'tweet': tweet,
-                'result': model.predict(freq_testes).values}
-
+    # Verify if is RT
     def isReTweet(self, tweet):
-        # Ignore retweets
         if re.match(r'^RT.*', tweet):
             return True
         else:
@@ -74,80 +30,102 @@ class SentimentAnalysis:
 
         # Remove URLS. (I stole this regex from the internet.)
         tweet = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', tweet)
-
-        tweet = re.sub(r'\bthats\b', 'that is', tweet)
-        tweet = re.sub(r'\bive\b', 'i have', tweet)
-        tweet = re.sub(r'\bim\b', 'i am', tweet)
-        tweet = re.sub(r'\bya\b', 'yeah', tweet)
-        tweet = re.sub(r'\bcant\b', 'can not', tweet)
-        tweet = re.sub(r'\bwont\b', 'will not', tweet)
-        tweet = re.sub(r'\bid\b', 'i would', tweet)
-        tweet = re.sub(r'wtf', 'what the fuck', tweet)
-        tweet = re.sub(r'\bwth\b', 'what the hell', tweet)
-        tweet = re.sub(r'\br\b', 'are', tweet)
-        tweet = re.sub(r'\bu\b', 'you', tweet)
-        tweet = re.sub(r'\bk\b', 'OK', tweet)
-        tweet = re.sub(r'\bsux\b', 'sucks', tweet)
-        tweet = re.sub(r'\bno+\b', 'no', tweet)
-        tweet = re.sub(r'\bcoo+\b', 'cool', tweet)
-
         # remove emojis
         tweet = self.emoji_pattern.sub(r'', tweet)
 
         return tweet
 
-    # Utilizando o pacote TextBlob, mas foi necessário traduzir para o Inglês.
-    def getSentimentAnalysis(self, tweet):
+    # Analize text tweet sentiment (polarity and subjectivity).
+    def analyzeTweetSentiment(self, tweet):
 
-        # Verify if retweet
-        # print(self.isReTweet(str(tweet)))
+        text_blod = TextBlob(tweet)
+        sentences = text_blod.sentences
+        sentences_sentiment = []
+        sentence_sentiment = []
+        tmp_sentiment = []
 
-        text = self.cleanTweet(tweet)
+        # print('------------------------------------------------------------------')
+        #print('Tweet Clear: {0}'.format(tweet))
+        # print('\n')
 
-        textBlod = TextBlob(text)
-        frase = textBlod.sentences
-
-        print('------------------------------------------------------------------')
-        print('Antes: {0}'.format(tweet))
-        print('Depoi: {0}'.format(text))
-        print('-------              -------------               -----------------')
-
-        if textBlod.detect_language() != 'en':
-            trad = TextBlob(str(textBlod.translate(to='en')))
-            print('Sentimento Geral: {0}'.format(trad.sentiment))
+        if text_blod.detect_language() != 'en':
+            try:
+                trad = TextBlob(str(text_blod.translate(to='en')))
+                sentences_sentiment = trad.sentiment
+            except Exception as e:
+                print(e)
+                sentences_sentiment = text_blod.sentiment
+            # print('Sentimento Geral: {0}'.format(trad.sentiment))
         else:
-            print('Sentimento Geral: {0}'.format(textBlod.sentiment))
+            sentences_sentiment = text_blod.sentiment
+            # print('Sentimento Geral: {0}'.format(text_blod.sentiment))
 
-        print('\n')
+        # print('\n')
 
-        for sentence in frase:
-            if sentence.detect_language() != 'en':
-                traducao = TextBlob(str(sentence.translate(to='en')))
-                print('Frase: {0} - Sentimento: {1}'.format(traducao, traducao.sentiment))
-            else:
-                print('Frase: {0} - Sentimento: {1}'.format(sentence, sentence.sentiment))
+        # Analyze each sentence
+        # for sentence in sentences:
+#
+        #     if sentence.detect_language() != 'en':
+        #         traducao = TextBlob(str(sentence.translate(to='en')))
+        #         tmp_sentiment.append((traducao.sentiment.polarity, traducao.sentiment.subjectivity))
+        #         print('Frase: {0} - Sentimento: {1}'.format(traducao, traducao.sentiment))
+        #     else:
+        #         tmp_sentiment.append((sentence.sentiment.polarity, sentence.sentiment.subjectivity))
+        #         print('Frase: {0} - Sentimento: {1}'.format(sentence, sentence.sentiment))
+#
+        # polarity = pd.DataFrame(tmp_sentiment, columns=['polarity', 'subjectivity'])
+        # polarity = polarity[polarity['polarity'] != 0.0]
 
-        print('------------------------------------------------------------------')
+        # if polarity.empty:
+        #     print('OK')
+        # else:
+        #     a = sum(polarity['polarity'].map(lambda x: float(x)))
+        #     b = polarity['polarity'].count()
+        #     media = a/b
+        #     print('Soma: {0} e Qtde: {1} e Med: {2}'.format(a, b, media))
 
-        #if frase.detect_language() != 'en':
-        #    traducao = TextBlob(str(frase.translate(to='en')))
-        #    print('Tweet: {0} - Sentimento: {1}'.format(tweet, traducao.sentiment))
-        #else:
-        #    print('Tweet: {0} - Sentimento: {1}'.format(tweet, frase.sentiment))
+        return sentences_sentiment
 
-        return True
+    def listTweetResult(self):
 
-    def test(self):
         db = Mongo()
-
         tweets = db.listTweets()
+        analysis_result = []
 
         for tweet in tweets:
-            self.getSentimentAnalysis(tweet['text'])
 
+            # tweet = json.loads(tweet)
+
+            if tweet['truncated']:
+                text = tweet['extended_tweet']['full_text']
+            else:
+                text = tweet['text']
+
+            time_ms = tweet['timestamp_ms']
+
+            # tweets['text'] = tweet['text']
+            hashtags = pd.DataFrame(tweet['entities']['hashtags'])
+
+            if hashtags.empty:
+                tags = list()
+            else:
+                tags = hashtags.query('text == "BRA" or text == "ARG" or text == "ESP" or text == "GER" or '
+                                      'text == "FRA" or text == "POR" or text == "ENG" or text == "BEL" or '
+                                      'text == "URU" ')['text'].tolist()
+
+            # Sentiment Analysis
+            clean_text = self.cleanTweet(text)
+            sent = self.analyzeTweetSentiment(clean_text)
+
+            analysis_result.append((text, time_ms, tags, sent))
+
+            print('Time: {0}'.format(time_ms))
+            print('Tweet: {0}'.format(text))
+            print('Sentimento: {0}'.format(sent.polarity))
+            print('Hastags: {0}'.format(tags))
+
+        return analysis_result
 
 
 obj = SentimentAnalysis()
-obj.test()
-
-#print(obj.cleanTweet('😂😂😂😬👀🙄👹😍😜😎 Gabriel é lindo'))
+result = obj.listTweetResult()
